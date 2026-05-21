@@ -1,22 +1,45 @@
-# 🎙️ Parakeet Transcriber
+<div align="center">
 
-Transcreve vídeos `.mp4` e `.mkv` localmente usando **NVIDIA Parakeet TDT 0.6B v2**.  
+<img src="logo-subvidia.jpeg" alt="Subvidia" width="520"/>
+
+# Subvidia
+
+**Transcrição de vídeos com aceleração da placa de vídeo**
+
+Transcreve vídeos `.mp4` e `.mkv` localmente usando **Faster-Whisper** com aceleração via **CUDA**.
 Gera `.srt` (legendas com timestamps por palavra) e `.txt` (texto plano).
+
+---
+
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
+![CUDA](https://img.shields.io/badge/CUDA-12.x-76B900?style=for-the-badge&logo=nvidia&logoColor=white)
+![NVIDIA](https://img.shields.io/badge/NVIDIA-GPU-76B900?style=for-the-badge&logo=nvidia&logoColor=white)
+![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white)
+![Whisper](https://img.shields.io/badge/Faster--Whisper-large--v3-412991?style=for-the-badge&logo=openai&logoColor=white)
+![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)
+
+</div>
+
+---
 
 ## Requisitos
 
-| Item | Versão |
-|---|---|
-| GPU NVIDIA | RTX 3060+ (12GB VRAM é ótimo) |
-| CUDA | 12.x |
-| Python | 3.10+ |
-| FFmpeg | Qualquer versão recente |
+| Item       | Versão                          |
+| ---------- | ------------------------------- |
+| GPU NVIDIA | RTX 3060+ (12GB VRAM recomendado) |
+| CUDA       | 12.x                            |
+| Python     | 3.10+                           |
+| FFmpeg     | Qualquer versão recente         |
+
+---
 
 ## Instalação
 
 ```bash
 # Clone / copie os arquivos e entre na pasta
-cd parakeet-transcriber
+cd subvideo
 
 # Rode o setup (Linux/Ubuntu)
 chmod +x setup.sh
@@ -24,6 +47,7 @@ chmod +x setup.sh
 ```
 
 **Ou manualmente:**
+
 ```bash
 # FFmpeg
 sudo apt install ffmpeg
@@ -31,9 +55,11 @@ sudo apt install ffmpeg
 # PyTorch com CUDA 12.1
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
 
-# NeMo
-pip install "nemo_toolkit[asr]>=2.0.0"
+# Faster-Whisper
+pip install faster-whisper
 ```
+
+---
 
 ## Uso
 
@@ -47,12 +73,20 @@ python transcribe.py
 # Ou especifique caminhos
 python transcribe.py --data /mnt/videos --subtitles /mnt/legendas
 
+# Escolha o modelo (tiny / base / small / medium / large-v3)
+python transcribe.py --model medium
+
+# Defina o idioma (pt, en, es...) ou auto-detect
+python transcribe.py --language pt
+
 # Mais palavras por bloco de legenda (padrão: 8)
 python transcribe.py --max-words 12
 
 # Aceitar mais extensões
 python transcribe.py --ext mp4 mkv avi webm
 ```
+
+---
 
 ## Saída
 
@@ -64,32 +98,39 @@ subtitles/
 └── filme.txt   ← transcrição plana completa
 ```
 
-**Exemplo de .srt gerado:**
+**Exemplo de `.srt` gerado:**
+
 ```
 1
 00:00:00,120 --> 00:00:03,840
-Hello and welcome to today's presentation.
+Olá e bem-vindo à apresentação de hoje.
 
 2
 00:00:03,960 --> 00:00:07,200
-We're going to talk about machine learning.
+Vamos falar sobre machine learning.
 ```
+
+---
 
 ## Performance esperada (RTX 3060 12GB)
 
-| Vídeo | Tempo de transcrição |
-|---|---|
-| 10 min | ~5-10 segundos |
-| 1 hora | ~30-60 segundos |
-| 2 horas | ~1-2 minutos |
+| Vídeo   | Tempo de transcrição |
+| ------- | -------------------- |
+| 10 min  | ~30-60 segundos      |
+| 1 hora  | ~3-5 minutos         |
+| 2 horas | ~6-10 minutos        |
 
-> O Parakeet processa em **batch** — quanto maior o vídeo, mais eficiente fica.
+> O Faster-Whisper processa em **batch** com `float16` na GPU — quanto maior o vídeo, mais eficiente fica.
+
+---
 
 ## Limitações
 
-- **Idioma**: Parakeet TDT v2 é **English-only**. Para PT-BR, use Whisper Large v3.
+- **Modelo grande**: `large-v3` exige ~10GB de VRAM. Use `medium` ou `small` em GPUs menores.
 - **Áudio ruidoso**: Performance cai em ambientes com muito ruído de fundo.
 - **Múltiplos falantes**: Sem diarização (identificação de locutor) nesta versão.
+
+---
 
 ## Arquitetura
 
@@ -99,16 +140,34 @@ video.mp4
     ▼ FFmpeg (extrai áudio)
 audio.wav  ← 16kHz, mono, PCM 16-bit
     │
-    ▼ NVIDIA Parakeet TDT 0.6B v2 (NeMo)
+    ▼ Faster-Whisper large-v3 (CUDA / float16)
 (texto + word timestamps)
     │
     ├──▶ subtitles/video.txt  (texto plano)
     └──▶ subtitles/video.srt  (legendas agrupadas)
 ```
 
+---
+
+## Stack
+
+<div align="center">
+
+| Camada            | Tecnologia                                                              |
+| ----------------- | ----------------------------------------------------------------------- |
+| **Linguagem**     | Python 3.10+                                                            |
+| **Modelo ASR**    | [Faster-Whisper](https://github.com/SYSTRAN/faster-whisper) (large-v3)  |
+| **Deep Learning** | PyTorch + CUDA 12.1                                                     |
+| **Áudio/Vídeo**   | FFmpeg + ffprobe                                                        |
+| **Aceleração**    | NVIDIA GPU (CUDA cores + Tensor cores)                                  |
+
+</div>
+
+---
+
 ## Licença
 
-- **Parakeet TDT**: [NVIDIA Open Model License](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2)
-- **NeMo**: Apache 2.0
+- **Faster-Whisper**: MIT
+- **Whisper (OpenAI)**: MIT
 - **FFmpeg**: LGPL/GPL
 - **Este script**: MIT
